@@ -20,6 +20,13 @@ class _LoginViewState extends State<LoginView> {
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
   @override
+  void dispose() {
+    emailController.dispose();
+    passwordController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final appBar = UIConstants.appBar(); // avoid rebuilt
     return Scaffold(
