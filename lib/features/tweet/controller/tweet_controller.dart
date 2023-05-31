@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:twitter_clone/apis/storage_api.dart';
 import 'package:twitter_clone/apis/tweet_api.dart';
 import 'package:twitter_clone/core/enums/tweet_type_enum.dart';
 import 'package:twitter_clone/core/utils.dart';
@@ -13,15 +14,21 @@ final tweetControllerProvider =
   return TweetController(
     ref: ref,
     tweetAPI: ref.watch(tweetAPIProvider),
+    storageAPI: ref.watch(stogareAPIProvider),
   );
 });
 
 class TweetController extends StateNotifier<bool> {
   final Ref _ref;
   final TweetAPI _tweetAPI;
-  TweetController({required Ref ref, required TweetAPI tweetAPI})
+  final StorageAPI _storageAPI;
+  TweetController(
+      {required Ref ref,
+      required TweetAPI tweetAPI,
+      required StorageAPI storageAPI})
       : _ref = ref,
         _tweetAPI = tweetAPI,
+        _storageAPI = storageAPI,
         super(false);
 
   void shareTweet({
@@ -44,7 +51,32 @@ class TweetController extends StateNotifier<bool> {
     required List<File> images,
     required String text,
     required BuildContext context,
-  }) {}
+  }) async {
+    state = true;
+    final hashtags = _getHashtagsFromText(text);
+    final link = _getLinkFromText(text);
+    final user = _ref.read(currentUserDetailsProvider).value!;
+    final imageLinks = await _storageAPI.uploadImage(images);
+    Tweet tweet = Tweet(
+      text: text,
+      hashtags: hashtags,
+      link: link,
+      imageLinks: imageLinks,
+      uid: user.uid,
+      tweetType: TweetType.text,
+      tweetedAt: DateTime.now(),
+      likes: [],
+      commentIds: [],
+      id: '',
+      reshareCount: 0,
+      retweetedBy: '',
+      repliedTo: '',
+    );
+
+    final res = await _tweetAPI.shareTweet(tweet);
+    state = false;
+    res.fold((l) => showSnackBar(context, l.message), (r) {});
+  }
 
   void _shareTextTweet({
     required String text,
