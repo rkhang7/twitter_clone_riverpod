@@ -1,8 +1,13 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:twitter_clone/common/common.dart';
 import 'package:twitter_clone/features/tweet/controller/tweet_controller.dart';
 import 'package:twitter_clone/features/tweet/widget/tweet_card.dart';
+import 'package:twitter_clone/models/tweet_model.dart';
+
+import '../../../constants/appwrite_constants.dart';
 
 class TweetList extends ConsumerWidget {
   const TweetList({super.key});
@@ -11,13 +16,30 @@ class TweetList extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return ref.watch(getTweetProvider).when(
           data: (tweets) {
-            return ListView.builder(
-              itemCount: tweets.length,
-              itemBuilder: (context, index) {
-                final tweet = tweets[index];
-                return TweetCard(tweet: tweet);
-              },
-            );
+            return ref.watch(getLastestTweetProvider).when(data: (data) {
+              if (data.events.contains(
+                'databases.*.collections.${AppwriteConstants.tweetsCollection}.documents.*.create',
+              )) {
+                tweets.insert(0, Tweet.fromMap(data.payload));
+              }
+              return ListView.builder(
+                itemCount: tweets.length,
+                itemBuilder: (context, index) {
+                  final tweet = tweets[index];
+                  return TweetCard(tweet: tweet);
+                },
+              );
+            }, error: (error, st) {
+              return ErrorText(error: error.toString());
+            }, loading: () {
+              return ListView.builder(
+                itemCount: tweets.length,
+                itemBuilder: (context, index) {
+                  final tweet = tweets[index];
+                  return TweetCard(tweet: tweet);
+                },
+              );
+            });
           },
           error: (error, st) {
             return ErrorText(error: error.toString());
